@@ -68,7 +68,7 @@ public class Robot extends TimedRobot {
   private static final double climbWheelCirc = Math.PI * .02;
   private static final int countsPerRev = 42;
   private static final double driveWheelscirc = .26;
-  private static final double climbSpeed = 0.35;
+  private static final double climbSpeed = 0.50;
   // creates an EventLoop object which checks for the inputs it's bound to (e.g. rightTrigger(loop))
   private static final EventLoop loop = new EventLoop();
   private RelativeEncoder shooterEncoder;
@@ -103,7 +103,7 @@ public class Robot extends TimedRobot {
   try (MjpegServer mjpegServer = new MjpegServer("Serve_USB Camera 0", 1181)) {
     mjpegServer.setSource(cam1);
   }
-  m_chooser.setDefaultOption("Default Auto", kDefaultAuto);
+  m_chooser.setDefaultOption("Default Auto", kMoveForward);
     m_chooser.addOption("Move Forward", kMoveForward);
     m_chooser.addOption("Move forward left", kMoveLeft);
     m_chooser.addOption("Move forward right", kMoveRight);
@@ -208,20 +208,16 @@ public class Robot extends TimedRobot {
       case kMoveForward:
         // Shoot and move forward 320 cm\
           autonomousShootLogic();
-        
+
         // drive base positioning
         if(leftEncoder.getPosition() <= 96){
           leftLeader.set(-0.1);
           rightLeader.set(0.1);
            driveBase.feed();
         } else if(leftEncoder.getPosition() > 96 && leftEncoder.getPosition() <= 126){
-          leftLeader.set(-0.1);
-          rightLeader.set(-0.1);
-          driveBase.feed();
-        } else if(leftEncoder.getPosition() > 126 && leftEncoder.getPosition() <= 212) {
-          leftLeader.set(-0.1);
+          leftLeader.set(0.1);
           rightLeader.set(0.1);
-           driveBase.feed();
+          driveBase.feed();
         } else {
           leftLeader.set(0);
           rightLeader.set(0);
