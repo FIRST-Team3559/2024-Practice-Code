@@ -53,9 +53,9 @@ public class Robot extends TimedRobot {
   private static final int rightFollowerDeviceID = 14;*/
   private static final int elevatorMotorDeviceID = 15;
   private static final int climbMotorDeviceID = 16;
-  private final DigitalInput climbLimitSwitch1 = new DigitalInput(0);
-  private final DigitalInput climbLimitSwitch2 = new DigitalInput(1);
-  private final DigitalInput climbLimitSwitch3 = new DigitalInput(2);
+  private final DigitalInput climbLimitSwitchDown1 = new DigitalInput(0);
+  private final DigitalInput climbLimitSwitchDown2 = new DigitalInput(1);
+  private final DigitalInput climbLimitSwitchUp = new DigitalInput(2);
   private static final int topShooterMotorDeviceID = 18;
   private static final int bottomShooterMotorDeviceID = 19;
   private CANSparkMax leftLeader, leftFollower, rightLeader, rightFollower, climbMotor;
@@ -68,6 +68,7 @@ public class Robot extends TimedRobot {
   private static final double climbWheelCirc = Math.PI * .02;
   private static final int countsPerRev = 42;
   private static final double driveWheelscirc = .26;
+  private static final double climbSpeed = 0.35;
   // creates an EventLoop object which checks for the inputs it's bound to (e.g. rightTrigger(loop))
   private static final EventLoop loop = new EventLoop();
   private RelativeEncoder shooterEncoder;
@@ -195,31 +196,31 @@ public class Robot extends TimedRobot {
     double y = ty.getDouble(0.0);
     double area = ta.getDouble(0.0);*/
 
-    if(climbLimitSwitch1.get() || climbLimitSwitch2.get()){
+    // lower the climber when in autonomous until it hits the limit switches
+    // ---- all limit switches are false by default ----
+    if(climbLimitSwitchDown1.get() == false || climbLimitSwitchDown2.get() == false ){
       climbMotor.set(0);
     } else {
-      climbMotor.set(-0.35);
+      climbMotor.set(-climbSpeed);
     }
+
     switch (m_selected) {
       case kMoveForward:
         // Shoot and move forward 320 cm\
-          topShooterMotor.set(1);
-          Timer.delay(1.5);
-          bottomShooterMotor.set(1);
-          Timer.delay(.5);
-          topShooterMotor.set(0);
-          bottomShooterMotor.set(0);
+          autonomousShootLogic();
+        
+        // drive base positioning
         if(leftEncoder.getPosition() <= 96){
-          leftLeader.set(0.1);
-          rightLeader.set(-0.1);
+          leftLeader.set(-0.1);
+          rightLeader.set(0.1);
            driveBase.feed();
         } else if(leftEncoder.getPosition() > 96 && leftEncoder.getPosition() <= 126){
-          leftLeader.set(0.1);
-          rightLeader.set(0.1);
+          leftLeader.set(-0.1);
+          rightLeader.set(-0.1);
           driveBase.feed();
         } else if(leftEncoder.getPosition() > 126 && leftEncoder.getPosition() <= 212) {
-          leftLeader.set(0.1);
-          rightLeader.set(-0.1);
+          leftLeader.set(-0.1);
+          rightLeader.set(0.1);
            driveBase.feed();
         } else {
           leftLeader.set(0);
@@ -229,12 +230,7 @@ public class Robot extends TimedRobot {
         break;
 
         case kMoveLeft: 
-        topShooterMotor.set(1);
-          Timer.delay(1.5);
-          bottomShooterMotor.set(1);
-          Timer.delay(0.5);
-          topShooterMotor.set(0);
-          bottomShooterMotor.set(0);
+          autonomousShootLogic();
         if(leftEncoder.getPosition() <= 96){
           leftLeader.set(0.1);
           rightLeader.set(-0.1);
@@ -251,14 +247,9 @@ public class Robot extends TimedRobot {
         break;
 
         case kMoveRight:
-        //---o---o---o---o--- start shooter ---o---o---o---o---
-        topShooterMotor.set(1);
-          Timer.delay(1.5);
-          bottomShooterMotor.set(1);
-          Timer.delay(0.5);
-          topShooterMotor.set(0);
-          bottomShooterMotor.set(0);
-         //----o----o---o---o--- end shooter ----o----o----o----o---
+          //---o---o---o---o--- start shooter ---o---o---o---o---
+          autonomousShootLogic();
+          //----o----o---o---o--- end shooter ----o----o----o----o---
         if(leftEncoder.getPosition() <= 96){
           leftLeader.set(0.1);
           rightLeader.set(-0.1);
@@ -275,13 +266,8 @@ public class Robot extends TimedRobot {
         break;
 
         case kZigZag:
-        //::::::::::::::::  start shooter ::::::::;
-        topShooterMotor.set(1);
-          Timer.delay(1.5);
-          bottomShooterMotor.set(1);
-          Timer.delay(0.5);
-          topShooterMotor.set(0);
-          bottomShooterMotor.set(0);
+          //::::::::::::::::  start shooter ::::::::;
+          autonomousShootLogic();
           //---------- end shooter ----------- 
         if(leftEncoder.getPosition() <= 32){
           leftLeader.set(0.1);
@@ -355,28 +341,10 @@ public class Robot extends TimedRobot {
     } else if (operatorController.getLeftY()>0.5) {
       elevatorMotor.set(-0.2);
     } */
-    if (operatorController.y(loop).getAsBoolean()) {
-      // if climber has gone too high, this will stop it
-      if (!climbLimitSwitch3.get()){
-        climbMotor.set(0);
-      } else {
-      climbMotor.set(0.35);
-    } } else if (operatorController.a(loop).getAsBoolean()) {
-      // if climber has gone too far down, this will stop it  
-      /*if (!climbLimitSwitch1.get() || !climbLimitSwitch2.get()){
-        climbMotor.set(0);
-       } else {*/
-        climbMotor.set(-0.35);
-       /*}*/ }
-      /*if(climbLimitSwitch.get() || climbLimitSwitch2.get()){
-        climbMotor.set(0);
-      } else if(climbLimitSwitch.get() && climbLimitSwitch2.get()){
-        climbMotor.set(0); }*/
-       
 
-     else {
-      climbMotor.set(0);
-    }
+    // handles the logic for the climber
+    climbLogic();
+   
     
     //Button bindings for the drive controller
     if (driveController.rightBumper(loop).getAsBoolean()) {
@@ -426,5 +394,73 @@ public class Robot extends TimedRobot {
      // return (Math.pow(throttleInput,5))/3  + (Math.pow(throttleInput,3))/3 +throttleInput/3;
       return (Math.pow(throttleInput,3))/3 +throttleInput/3;
  //   return throttleInput;
+  }
+
+  
+  // handles all of the logic for climbing for the robot
+  public void climbLogic()
+  {
+
+    // check if the operator wants to move the climber up
+    if(operatorController.y(loop).getAsBoolean() == true)
+    {
+      // check upper limits before moving the climber up
+      if(climbLimitSwitchUp.get() == false) {
+        // upper limit switch is pressed, we don't want the climber to move
+        climbMotor.set(0);
+      }
+      else
+      {
+        // set climber to move up
+        climbMotor.set(climbSpeed);
+      }
+    }
+
+    // check if the opeator wants to move the climber down
+    else if(operatorController.a(loop).getAsBoolean() == true)
+    {
+      // check lower limits before moving the climber down
+      if(climbLimitSwitchDown1.get() == false || climbLimitSwitchDown2.get() == false)
+      {
+        // don't move the climb motor if already at lowest position
+        climbMotor.set(0);
+      }
+      else
+      {
+        // set climber to move down
+        climbMotor.set(-climbSpeed);
+      }
+    }
+
+    // the operator doesn't want to move the climber
+    else
+    {
+      climbMotor.set(0);
+    }
+
+    // print limit switch values to the dashboard for debugging
+    SmartDashboard.putBoolean("Up Limit Switch", climbLimitSwitchUp.get());
+    SmartDashboard.putBoolean("Down Limit Switch 1", climbLimitSwitchDown1.get());
+    SmartDashboard.putBoolean("Down Limit Switch 2", climbLimitSwitchDown2.get());
+  } // end climbLogics
+
+  // auto shoot
+  public void autonomousShootLogic()
+  {
+    // default motor values
+    topShooterMotor.set(0);
+    bottomShooterMotor.set(0);
+
+    // let top motor work up to max speed
+    topShooterMotor.set(1);
+   // Timer.delay(1.5);
+
+    // feed in next note for shooting
+    bottomShooterMotor.set(1);
+    Timer.delay(0.5);
+    
+    // set motors to stop moving
+    //topShooterMotor.set(0);
+    //bottomShooterMotor.set(0);
   }
 }
