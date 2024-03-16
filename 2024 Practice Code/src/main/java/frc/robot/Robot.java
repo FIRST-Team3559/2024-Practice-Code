@@ -198,12 +198,13 @@ public class Robot extends TimedRobot {
 
     // lower the climber when in autonomous until it hits the limit switches
     // ---- all limit switches are false by default ----
-    if(climbLimitSwitchDown1.get() == false || climbLimitSwitchDown2.get() == false ){
+    /*commented out by FAR until we can climb
+   if(climbLimitSwitchDown1.get() == false || climbLimitSwitchDown2.get() == false ){
       climbMotor.set(0);
     } else {
       climbMotor.set(-climbSpeed);
     }
-
+      */
     switch (m_selected) {
       case kMoveForward:
         // Shoot and move forward 320 cm\
@@ -211,12 +212,12 @@ public class Robot extends TimedRobot {
 
         // drive base positioning
         if(leftEncoder.getPosition() <= 96){
-          leftLeader.set(-0.1);
-          rightLeader.set(0.1);
+          leftLeader.set(-0.4);
+          rightLeader.set(0.4);
            driveBase.feed();
         } else if(leftEncoder.getPosition() > 96 && leftEncoder.getPosition() <= 126){
-          leftLeader.set(0.1);
-          rightLeader.set(0.1);
+          leftLeader.set(0.4);
+          rightLeader.set(0.4);
           driveBase.feed();
         } else {
           leftLeader.set(0);
@@ -228,14 +229,14 @@ public class Robot extends TimedRobot {
         case kMoveLeft: 
           autonomousShootLogic();
         if(leftEncoder.getPosition() <= 96){
-          leftLeader.set(0.1);
-          rightLeader.set(-0.1);
+          leftLeader.set(0.4);
+          rightLeader.set(-0.4);
         } else if(leftEncoder.getPosition() > 96 && leftEncoder.getPosition() <= 106){
           leftLeader.set(0);
-          rightLeader.set(-0.25);
+          rightLeader.set(-0.45);
         } else if(leftEncoder.getPosition() > 106 && leftEncoder.getPosition() <= 202){
-          leftLeader.set(0.1);
-          rightLeader.set(-0.1);
+          leftLeader.set(0.4);
+          rightLeader.set(-0.4);
         } else{
           leftLeader.set(0);
           rightLeader.set(0);
@@ -247,14 +248,14 @@ public class Robot extends TimedRobot {
           autonomousShootLogic();
           //----o----o---o---o--- end shooter ----o----o----o----o---
         if(leftEncoder.getPosition() <= 96){
-          leftLeader.set(0.1);
-          rightLeader.set(-0.1);
+          leftLeader.set(0.4);
+          rightLeader.set(-0.4);
         } else if(leftEncoder.getPosition() > 96 && leftEncoder.getPosition() <= 106){
-          leftLeader.set(0.25);
+          leftLeader.set(0.45);
           rightLeader.set(0);
         } else if(leftEncoder.getPosition() > 106 && leftEncoder.getPosition() <= 202){
-          leftLeader.set(0.1);
-          rightLeader.set(-0.1);
+          leftLeader.set(0.4);
+          rightLeader.set(-0.4);
         } else{
           leftLeader.set(0);
           rightLeader.set(0);
@@ -266,14 +267,14 @@ public class Robot extends TimedRobot {
           autonomousShootLogic();
           //---------- end shooter ----------- 
         if(leftEncoder.getPosition() <= 32){
-          leftLeader.set(0.1);
-          rightLeader.set(-0.1);
+          leftLeader.set(0.4);
+          rightLeader.set(-0.4);
         } else if(leftEncoder.getPosition() > 32 && leftEncoder.getPosition() <= 37){
           leftLeader.set(0);
-          rightLeader.set(-0.25);
+          rightLeader.set(-0.45);
         } else if(leftEncoder.getPosition() > 37 && leftEncoder.getPosition() <= 69){
-          leftLeader.set(0.15);
-          rightLeader.set(-0.15);
+          leftLeader.set(0.35);
+          rightLeader.set(-0.35);
         } else{
           leftLeader.set(0);
           rightLeader.set(0);
@@ -449,14 +450,14 @@ public class Robot extends TimedRobot {
 
     // let top motor work up to max speed
     topShooterMotor.set(1);
-   // Timer.delay(1.5);
+    Timer.delay(1.5);
 
     // feed in next note for shooting
     bottomShooterMotor.set(1);
-    Timer.delay(0.5);
+    Timer.delay(5.5);
     
     // set motors to stop moving
-    //topShooterMotor.set(0);
-    //bottomShooterMotor.set(0);
+    topShooterMotor.set(0);
+    bottomShooterMotor.set(0);
   }
 }
