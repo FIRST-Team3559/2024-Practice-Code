@@ -390,7 +390,7 @@ public class Robot extends TimedRobot {
     } else if(operatorController.rightTrigger(loop).getAsBoolean()){
       topShooterMotor.set(1);
       //not sure this is the right delay command
-      Commands.waitSeconds(0.5);
+      Timer.delay(0.75);
       bottomShooterMotor.set(1);
     }
     else if(operatorController.getRightTriggerAxis() == 0 || operatorController.getLeftTriggerAxis() == 0) {
