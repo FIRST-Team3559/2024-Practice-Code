@@ -12,6 +12,7 @@ import edu.wpi.first.wpilibj.event.EventLoop;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Commands;
 
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.RelativeEncoder;
@@ -25,9 +26,9 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.cscore.MjpegServer;
 
-import edu.wpi.first.networktables.NetworkTable;
+/*import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableEntry;
-import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.networktables.NetworkTableInstance;*/
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
  * each mode, as described in the TimedRobot documentation. If you change the name of this class or
@@ -35,22 +36,21 @@ import edu.wpi.first.networktables.NetworkTableInstance;
  * project.
  */
 public class Robot extends TimedRobot {
-  private static final String kDefaultAuto = "Default";
-  private static final String kMoveForward = "Only Move";
+  private static final String kDefaultAuto = "Default Auto";
+
+  private static final String kMoveBackward = "Move Backward";
+  private static final String kMoveBackLeft = "Move backward left";
   private static final String kMoveLeft = "Move forward left";
   private static final String kMoveRight = "Move forward right";
   private static final String kZigZag = "Zigzag Movement";
+  private static final String kMoveBackRight = "Move back then right";
   private String m_selected;
   private final SendableChooser<String> m_chooser = new SendableChooser<>();
-  private static final int leftLeaderDeviceID = 14;
-  private static final int leftFollowerDeviceID = 10;
-  private static final int rightLeaderDeviceID = 13;
   private static final int rightFollowerDeviceID = 12;
-  /*Ids to use on the practice bot
-  private static final int leftLeaderDeviceID = 12;
-  private static final int leftFollowerDeviceID = 13;
-  private static final int rightLeaderDeviceID = 10;
-  private static final int rightFollowerDeviceID = 14;*/
+  private static final int rightLeaderDeviceID = 17;
+  private static final int leftFollowerDeviceID = 10;
+  private static final int leftLeaderDeviceID = 14;
+  private static final int tiltMotorDeviceID = 20;
   private static final int elevatorMotorDeviceID = 15;
   private static final int climbMotorDeviceID = 16;
   private final DigitalInput climbLimitSwitchDown1 = new DigitalInput(0);
@@ -60,6 +60,7 @@ public class Robot extends TimedRobot {
   private static final int bottomShooterMotorDeviceID = 19;
   private CANSparkMax leftLeader, leftFollower, rightLeader, rightFollower, climbMotor;
   private CANSparkMax topShooterMotor, bottomShooterMotor;
+  private CANSparkMax elevatorMotor, tiltMotor;
   private DifferentialDrive driveBase;
   private DifferentialDrive shooterBase;
   private XboxController driveController;
@@ -69,6 +70,7 @@ public class Robot extends TimedRobot {
   private static final int countsPerRev = 42;
   private static final double driveWheelscirc = .26;
   private static final double climbSpeed = 0.50;
+  //private static double absDriveEncoderPosition = 0;
   // creates an EventLoop object which checks for the inputs it's bound to (e.g. rightTrigger(loop))
   private static final EventLoop loop = new EventLoop();
   private RelativeEncoder shooterEncoder;
@@ -76,7 +78,7 @@ public class Robot extends TimedRobot {
   private RelativeEncoder rightEncoder;
   private RelativeEncoder climberEncoder;
   //private double meterConversionFactor = 0.03125;
-  private double chassisPosition;
+  //private double chassisPosition;
 
   /*NetworkTable table = NetworkTableInstance.getDefault().getTable("limelight");
   private NetworkTableEntry tx = table.getEntry("tx");
@@ -103,11 +105,13 @@ public class Robot extends TimedRobot {
   try (MjpegServer mjpegServer = new MjpegServer("Serve_USB Camera 0", 1181)) {
     mjpegServer.setSource(cam1);
   }
-  m_chooser.setDefaultOption("Default Auto", kMoveForward);
-    m_chooser.addOption("Move Forward", kMoveForward);
-    m_chooser.addOption("Move forward left", kMoveLeft);
-    m_chooser.addOption("Move forward right", kMoveRight);
-    m_chooser.addOption("Zigzag Movement", kZigZag);
+  m_chooser.setDefaultOption("Default Auto", kDefaultAuto);
+    m_chooser.addOption("Move Backward then left", kMoveBackLeft);
+    m_chooser.addOption("Move Backward then right" , kMoveBackRight);
+    m_chooser.addOption("Move Backward" , kMoveBackward);
+    /*m_chooser.addOption("Move backward left", kMoveLeft);
+    (m_chooser.addOption("Move backward right", kMoveRight);
+    m_chooser.addOption("Zigzag Movement", kZigZag);*/
     SmartDashboard.putData("Auto choices", m_chooser);
 
     leftLeader = new CANSparkMax(leftLeaderDeviceID, MotorType.kBrushless);
@@ -115,7 +119,7 @@ public class Robot extends TimedRobot {
     rightLeader = new CANSparkMax(rightLeaderDeviceID, MotorType.kBrushless);
     rightFollower = new CANSparkMax(rightFollowerDeviceID, MotorType.kBrushless);
     climbMotor = new CANSparkMax(climbMotorDeviceID, MotorType.kBrushless);
-    //elevatorMotor = new CANSparkMax(elevatorMotorDeviceID, MotorType.kBrushless);
+    elevatorMotor = new CANSparkMax(elevatorMotorDeviceID, MotorType.kBrushless);
     topShooterMotor = new CANSparkMax(topShooterMotorDeviceID, MotorType.kBrushless);
     bottomShooterMotor = new CANSparkMax(bottomShooterMotorDeviceID, MotorType.kBrushless);
 
@@ -186,44 +190,111 @@ public class Robot extends TimedRobot {
      climberEncoder.setPosition(0);
      timer.reset();
      timer.start();
-  }
 
-  /** This function is called periodically during autonomous. */
-  @Override
-  public void autonomousPeriodic() {
-    /*//read values periodically
-    double x = tx.getDouble(0.0);
-    double y = ty.getDouble(0.0);
-    double area = ta.getDouble(0.0);*/
 
-    // lower the climber when in autonomous until it hits the limit switches
-    // ---- all limit switches are false by default ----
-    /*commented out by FAR until we can climb
-   if(climbLimitSwitchDown1.get() == false || climbLimitSwitchDown2.get() == false ){
+     if(climbLimitSwitchDown1.get() == false || climbLimitSwitchDown2.get() == false ){
       climbMotor.set(0);
     } else {
       climbMotor.set(-climbSpeed);
     }
-      */
-    switch (m_selected) {
-      case kMoveForward:
-        // Shoot and move forward 320 cm\
-          autonomousShootLogic();
+      
+     switch (m_selected) {
+      case kMoveBackLeft:
+        // Shoot and move backward 320 cm\
+          //autonomousShootLogic();
 
         // drive base positioning
-        if(leftEncoder.getPosition() <= 96){
-          leftLeader.set(-0.4);
-          rightLeader.set(0.4);
+        if(rightEncoder.getPosition() <= 96){
+          leftLeader.set(-1.0);
+          rightLeader.set(1.0);
            driveBase.feed();
-        } else if(leftEncoder.getPosition() > 96 && leftEncoder.getPosition() <= 126){
-          leftLeader.set(0.4);
-          rightLeader.set(0.4);
+        } else if(rightEncoder.getPosition() > 96 && rightEncoder.getPosition() <= 126){
+          leftLeader.set(0.2);
+          rightLeader.set(0.2);
           driveBase.feed();
         } else {
           leftLeader.set(0);
           rightLeader.set(0);
            driveBase.feed();
         } 
+        break;
+      }
+  }
+
+  /** This function is called periodically during autonomous. */
+  @Override
+  public void autonomousPeriodic() {
+    //read values periodically
+    //double x = tx.getDouble(0.0);
+    //double y = ty.getDouble(0.0);
+    //double area = ta.getDouble(0.0);
+
+    // lower the climber when in autonomous until it hits the limit switches
+    // ---- all limit switches are false by default ----
+   if(climbLimitSwitchDown1.get() == false || climbLimitSwitchDown2.get() == false ){
+      climbMotor.set(0);
+    } else {
+      climbMotor.set(-climbSpeed);
+    }
+      
+    switch (m_selected) {
+      // 1 revolution on the wheel equals 0.5 yards, and 1 position unit equals 1 yard
+      case kMoveBackward:
+      if(leftEncoder.getPosition() >= -4.5){
+          leftLeader.set(-0.1);
+          rightLeader.set(0.1);
+           driveBase.feed();
+        } else {
+          leftLeader.set(0);
+          rightLeader.set(0);
+        }
+      break;
+      case kMoveBackLeft:
+        // Shoot and move backward 320 cm\
+          //autonomousShootLogic();
+
+        // move backward for 3 yards
+        if(leftEncoder.getPosition() >= -3){
+          leftLeader.set(-0.2);
+          rightLeader.set(0.2);
+           driveBase.feed();
+        // turn left side backwards for 1 yard
+        } else if(rightEncoder.getPosition() > 2.5 && rightEncoder.getPosition() <= 6.5){
+          leftLeader.set(0);
+          rightLeader.set(0.2);
+          driveBase.feed();
+        } /*else if(rightEncoder.getPosition() > 3.5 && rightEncoder.getPosition() <= 5.5){
+          leftLeader.set(-0.2);
+          rightLeader.set(0.2);
+           driveBase.feed();
+        } */else {
+          leftLeader.set(0);
+          rightLeader.set(0);
+        }
+        break;
+      
+        case kMoveBackRight:
+        // Shoot and move backward 320 cm\
+          //autonomousShootLogic();
+
+        // move backward for 3 yards
+        if(rightEncoder.getPosition() <= 3){
+          leftLeader.set(-0.2);
+          rightLeader.set(0.2);
+           driveBase.feed();
+        // turn left side backwards for 1 yard
+        } else if(leftEncoder.getPosition() < -2.5 && leftEncoder.getPosition() >= -3.5){
+          leftLeader.set(-0.2);
+          rightLeader.set(0);
+          driveBase.feed();
+        } else if(leftEncoder.getPosition() < -3.5 && leftEncoder.getPosition() >= -5.5){
+          leftLeader.set(-0.2);
+          rightLeader.set(0.2);
+           driveBase.feed();
+        } else {
+          leftLeader.set(0);
+          rightLeader.set(0);
+        }
         break;
 
         case kMoveLeft: 
@@ -247,13 +318,13 @@ public class Robot extends TimedRobot {
           //---o---o---o---o--- start shooter ---o---o---o---o---
           autonomousShootLogic();
           //----o----o---o---o--- end shooter ----o----o----o----o---
-        if(leftEncoder.getPosition() <= 96){
+        if(rightEncoder.getPosition() <= 96){
           leftLeader.set(0.4);
           rightLeader.set(-0.4);
-        } else if(leftEncoder.getPosition() > 96 && leftEncoder.getPosition() <= 106){
+        } else if(rightEncoder.getPosition() > 96 && rightEncoder.getPosition() <= 106){
           leftLeader.set(0.45);
           rightLeader.set(0);
-        } else if(leftEncoder.getPosition() > 106 && leftEncoder.getPosition() <= 202){
+        } else if(rightEncoder.getPosition() > 106 && rightEncoder.getPosition() <= 202){
           leftLeader.set(0.4);
           rightLeader.set(-0.4);
         } else{
@@ -280,20 +351,22 @@ public class Robot extends TimedRobot {
           rightLeader.set(0);
         }
         break;
-        }
+        case kDefaultAuto:
+        break;
+        default:
+           // Put default auto code here
+        break;
+      }
+        driveBase.feed();
+        shooterBase.feed();
         //post to smart dashboard periodically
-        SmartDashboard.putNumber("Chassis distance in m",leftEncoder.getPosition());
+        SmartDashboard.putNumber("Chassis (left) distance in m",leftEncoder.getPosition());
+        SmartDashboard.putNumber("Chassis (right) distance in m",rightEncoder.getPosition());
         /*SmartDashboard.putNumber("LimelightX", x);
         SmartDashboard.putNumber("LimelightY", y);
         SmartDashboard.putNumber("LimelightArea", area);*/
-      // case kDefaultAuto:
-
-      // default:
-        // Put default auto code here
-       // break;
-       
   }
-  /** This function is called once when teleop is enabled. */
+  /* This function is called once when teleop is enabled. */
   @Override
   public void teleopInit() {
      leftEncoder.setPosition(0);
@@ -308,36 +381,39 @@ public class Robot extends TimedRobot {
   public void teleopPeriodic() {
     // checks for every button binding the loop object is bound to.
     loop.poll();
-    // Button bindings for the operator stick
-    if (operatorController.getRawButtonPressed(XboxController.Axis.kRightTrigger.value)){
-      timer.start();
-    }else if (operatorController.getRawButtonReleased(XboxController.Axis.kRightTrigger.value)){
-     timer.stop();
-     timer.reset();
-    }
-
 
     /*fires the shooter. Left trigger takes notes in, right pressed lightly fires top shooter
     pressing right trigger heavily fires the bottom shooter. Light press into a heavy press shoots correctly*/
     if(operatorController.leftTrigger(loop).getAsBoolean()){
       topShooterMotor.set(-0.4);
       bottomShooterMotor.set(-0.4);
-    } else if(operatorController.getRightTriggerAxis()>=0.25){
-      topShooterMotor.set(1); 
-      if(operatorController.getRightTriggerAxis()>=0.9){
+    } else if(operatorController.rightTrigger(loop).getAsBoolean()){
+      topShooterMotor.set(1);
+      //not sure this is the right delay command
+      Commands.waitSeconds(0.5);
       bottomShooterMotor.set(1);
-      }
-    } else if(operatorController.getRightTriggerAxis() == 0 || operatorController.getLeftTriggerAxis() == 0) {
+    }
+    else if(operatorController.getRightTriggerAxis() == 0 || operatorController.getLeftTriggerAxis() == 0) {
         topShooterMotor.set(0);
         bottomShooterMotor.set(0);
     }
 
-    //Elevator and Basket controls
-    /*if (operatorController.getLeftY()<-0.5) {
+    //Elevator controls
+    if (operatorController.getLeftY()<-0.5) {
       elevatorMotor.set(0.2);
     } else if (operatorController.getLeftY()>0.5) {
       elevatorMotor.set(-0.2);
-    } */
+    } 
+
+    //experimental shooter tilt controls - Holden.
+    //negations may need flipped, controls may need changed. I'm not sure
+    if (operatorController.getRightY()<-0.5){
+      //set to 0.1 for testing. Increase as necessary
+      tiltMotor.set(-0.1);
+    } else if (operatorController.getRightY()>0.5){
+       //set to 0.1 for testing. Increase as necessary
+      tiltMotor.set(0.1);
+    }
 
     // handles the logic for the climber
     climbLogic();
@@ -346,15 +422,13 @@ public class Robot extends TimedRobot {
     //Button bindings for the drive controller
     if (driveController.rightBumper(loop).getAsBoolean()) {
       driveBase.tankDrive(LeftThrottle(), -LeftThrottle());
-    } else if(!driveController.leftBumper(loop).getAsBoolean()) {
+    } else if(!driveController.rightBumper(loop).getAsBoolean()) {
       driveBase.tankDrive(LeftThrottle(), RightThrottle());
     }
-    
     driveBase.feed();
     shooterBase.feed();
-
-    chassisPosition = (leftEncoder.getPosition() - rightEncoder.getPosition())/2;
-    SmartDashboard.putNumber("Chassis distance in m",chassisPosition);
+    
+    SmartDashboard.putNumber("Chassis distance in m",leftEncoder.getPosition());
   }
 
   /** This function is called once when the robot is disabled. */
@@ -454,7 +528,7 @@ public class Robot extends TimedRobot {
 
     // feed in next note for shooting
     bottomShooterMotor.set(1);
-    Timer.delay(5.5);
+    Timer.delay(1);
     
     // set motors to stop moving
     topShooterMotor.set(0);
