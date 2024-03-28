@@ -46,16 +46,16 @@ public class Robot extends TimedRobot {
   private static final String kMoveBackRight = "Move back then right";
   private String m_selected;
   private final SendableChooser<String> m_chooser = new SendableChooser<>();
-  private static final int rightFollowerDeviceID = 10;
+  //practice bot device IDs
+  /*private static final int rightFollowerDeviceID = 10;
   private static final int rightLeaderDeviceID = 14;
   private static final int leftFollowerDeviceID = 12;
-  private static final int leftLeaderDeviceID = 13;
-  /*This year's robot drive motor IDs.
-   * private static final int rightFollowerDeviceID = 12;
+  private static final int leftLeaderDeviceID = 13;*/
+  //This year's robot drive motor IDs.
+  private static final int rightFollowerDeviceID = 12;
   private static final int rightLeaderDeviceID = 17;
   private static final int leftFollowerDeviceID = 10;
   private static final int leftLeaderDeviceID = 14;
-   */
   private static final int tiltMotorDeviceID = 20;
   private static final int elevatorMotorDeviceID = 15;
   private static final int climbMotorDeviceID = 16;
@@ -63,10 +63,9 @@ public class Robot extends TimedRobot {
   private final DigitalInput climbLimitSwitchDown1 = new DigitalInput(0);
   private final DigitalInput climbLimitSwitchDown2 = new DigitalInput(1);
   private final DigitalInput climbLimitSwitchUp = new DigitalInput(2);
-  /*private final DigitalInpit elevatorLimitSwitchDown = new DigitalInput(3);
-  private final DigitalInput elevatorLimitSwitchUp = new DigitalInput(4);
-  private final DigitalInput tiltLimitSwitchDown = new DigitalInput(5);
-  private final DigitalInput tiltLimitSwitchUp = new DigitalInput(6); */
+  private final DigitalInput tiltLimitSwitch = new DigitalInput(3);
+  private final DigitalInput elevatorLimitSwitchDown = new DigitalInput(4);
+  /*private final DigitalInput elevatorLimitSwitchUp = new DigitalInput(5);*/
   private static final int topShooterMotorDeviceID = 18;
   private static final int bottomShooterMotorDeviceID = 19;
   private CANSparkMax leftLeader, leftFollower, rightLeader, rightFollower, climbMotor;
@@ -131,6 +130,7 @@ public class Robot extends TimedRobot {
     rightFollower = new CANSparkMax(rightFollowerDeviceID, MotorType.kBrushless);
     climbMotor = new CANSparkMax(climbMotorDeviceID, MotorType.kBrushless);
     elevatorMotor = new CANSparkMax(elevatorMotorDeviceID, MotorType.kBrushless);
+    tiltMotor = new CANSparkMax(tiltMotorDeviceID, MotorType.kBrushless);
     topShooterMotor = new CANSparkMax(topShooterMotorDeviceID, MotorType.kBrushless);
     bottomShooterMotor = new CANSparkMax(bottomShooterMotorDeviceID, MotorType.kBrushless);
 
@@ -141,6 +141,7 @@ public class Robot extends TimedRobot {
     rightFollower.setIdleMode(IdleMode.kBrake);
     topShooterMotor.setIdleMode(IdleMode.kBrake);
     bottomShooterMotor.setIdleMode(IdleMode.kBrake);
+    tiltMotor.setIdleMode(IdleMode.kBrake);
 
     topShooterMotor.setOpenLoopRampRate(0);
     bottomShooterMotor.setOpenLoopRampRate(0);
@@ -165,8 +166,6 @@ public class Robot extends TimedRobot {
 
     driveController = new XboxController(0);
     operatorController = new XboxController(1);
-
-    timer = new Timer();
 
     SmartDashboard.putNumber("Shooter distance in cm:", shooterEncoder.getPosition());
   }
@@ -199,10 +198,7 @@ public class Robot extends TimedRobot {
      leftEncoder.setPosition(0);
      rightEncoder.setPosition(0);
      climberEncoder.setPosition(0);
-     timer.reset();
-     timer.start();
-
-      
+     
   }
 
   /** This function is called periodically during autonomous. */
@@ -368,47 +364,47 @@ public class Robot extends TimedRobot {
 
     /*fires the shooter. Left trigger takes notes in, right pressed lightly fires top shooter
     pressing right trigger heavily fires the bottom shooter. Light press into a heavy press shoots correctly*/
-    if(operatorController.leftTrigger(loop).getAsBoolean()){
+    if(operatorController.leftTrigger(loop).getAsBoolean()) {
       topShooterMotor.set(-0.4);
       bottomShooterMotor.set(-0.4);
-    } else if(operatorController.rightTrigger(loop).getAsBoolean()){
+    } else if (operatorController.getRightTriggerAxis()>=0.25){
       topShooterMotor.set(1);
-      //not sure this is the right delay command
-      Timer.delay(0.75);
-      bottomShooterMotor.set(1);
-    }
-    else if(operatorController.getRightTriggerAxis() == 0 || operatorController.getLeftTriggerAxis() == 0) {
-        topShooterMotor.set(0);
-        bottomShooterMotor.set(0);
+      if (operatorController.getRightTriggerAxis()>=0.9){
+        bottomShooterMotor.set(1);
+      }
+    //} else if(operatorController.rightTrigger(loop).getAsBoolean()) {
+      //teleopShootLogic();
+    } else if(operatorController.getRightTriggerAxis() == 0 && operatorController.getLeftTriggerAxis() == 0) {
+      topShooterMotor.set(0);
+      bottomShooterMotor.set(0);
     }
 
     //Elevator controls
     if (operatorController.getLeftY()<-0.5) {
       //if (elevatorLimitSwitchDown.get() == false){ 
-      elevatorMotor.set(0.2);
+      elevatorMotor.set(0.05);
       //} else {elevatorMotor.set(0);
       //}
     } else if (operatorController.getLeftY()>0.5) {
       //if (elevatorLimitSwitchUp.get() == false){
-      elevatorMotor.set(-0.2);
+      elevatorMotor.set(-0.05);
       //} else {elevatorMotor.set(0);
       //}
-    } 
+    } else {
+      elevatorMotor.set(0);
+    }
 
-    //experimental shooter tilt controls - Holden.
-    //negations may need flipped, controls may need changed. I'm not sure
     if (operatorController.getRightY()<-0.5){
-      //set to 0.1 for testing. Increase as necessary
-      //if (tiltLimitSwitchDown.get() == false){
-      tiltMotor.set(0.1);
-      //} else {tiltMotor.set(0);
-      //}
+      //this limit switch is really weird and true is false or something
+      if (tiltLimitSwitch.get() == true){
+        tiltMotor.set(-0.1);
+      } else {
+        tiltMotor.set(-0.02);
+      }
     } else if (operatorController.getRightY()>0.5){
-       //set to 0.1 for testing. Increase as necessary
-      //if (tiltLimitSwitchUp.get() == false){
-       tiltMotor.set(-0.1);
-       //} else {tiltMotor.set(0);
-      //}
+       tiltMotor.set(0.1);
+    } else {
+     tiltMotor.set(-0.01);
     }
 
     // handles the logic for the climber
@@ -425,6 +421,7 @@ public class Robot extends TimedRobot {
     shooterBase.feed();
     
     SmartDashboard.putNumber("Chassis distance in m",leftEncoder.getPosition());
+    SmartDashboard.putBoolean("Limit Switch Triggered:", tiltLimitSwitch.get());
   }
 
   /** This function is called once when the robot is disabled. */
@@ -511,6 +508,13 @@ public class Robot extends TimedRobot {
     SmartDashboard.putBoolean("Down Limit Switch 2", climbLimitSwitchDown2.get());
   } // end climbLogics
 
+  public void teleopShootLogic()
+  {
+    topShooterMotor.set(1);
+      //not sure this is the right delay command
+      Timer.delay(1.5);
+      bottomShooterMotor.set(1);
+  }
 
   // auto shoot
   public void autonomousShootLogic()
